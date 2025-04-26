@@ -1,0 +1,15 @@
+venv/
+.env
+media/
+
+migrations/
+*.sqlite3
+__pycache__
+static/static_root/
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+.vscode
+.idea
