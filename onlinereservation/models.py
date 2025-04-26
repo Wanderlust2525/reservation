@@ -25,7 +25,7 @@ class Company(models.Model):
         return self.name
 
 class Worker(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='worker_profile')
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='workers')
     full_name = models.CharField(max_length=255)
     profession = models.CharField(max_length=255)
@@ -59,7 +59,6 @@ class Reservation(models.Model):
     comment = models.TextField(blank=True)
     date = models.DateField()
     time = models.TimeField()
-    worker = models.ForeignKey('Worker', on_delete=models.CASCADE)
     ticket_number = models.CharField(max_length=10, blank=True, unique=False)
 
     def save(self, *args, **kwargs):

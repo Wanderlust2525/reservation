@@ -1,23 +1,34 @@
 from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from django.contrib.auth import authenticate, login
+from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
 
 from .serializers import *
 
 class CompanyLoginView(APIView):
-    def post(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password')
-        
-        user = authenticate(request, username=username, password=password)
-        if user is not None and user.is_company:
-            login(request, user)
-            return Response({"message": "Вы успешно вошли как компания"})
+    def post(self, request, *args, **kwargs):
+        serializer = CompanyLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+        user = authenticate(username=username, password=password)
+
+        if user and user.is_company:
+            token, created = Token.objects.get_or_create(user=user)
+            company = getattr(user, 'company', None)
+            return Response({
+                'token': token.key,
+                'company_id': company.id,
+                'company_name': company.name
+            })
+
         return Response({"error": "Неверные учетные данные"}, status=status.HTTP_401_UNAUTHORIZED)
+
     
 
 class CompanyRegisterView(CreateAPIView):
@@ -26,14 +37,38 @@ class CompanyRegisterView(CreateAPIView):
 
 
 class CompanyListView(ListAPIView):
+    queryset = Company.objects.all()
     serializer_class = CompanyListSerializer
-   
+    permission_classes = [AllowAny]  
 
     def get_queryset(self):
         industry_id = self.request.query_params.get('industry')
         if industry_id:
             return Company.objects.filter(industry_id=industry_id)
         return Company.objects.all()
+    
+    
+class WorkerLoginView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = WorkerLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+        user = authenticate(username=username, password=password)
+
+        if user and user.is_worker:
+            token, created = Token.objects.get_or_create(user=user)
+            worker = getattr(user, 'worker_profile', None)
+            if not worker:
+                return Response({"error": "Профиль работника не найден."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({
+                'token': token.key,
+                'worker_id': worker.id,
+                'worker_name': worker.full_name,
+            })
+
+        return Response({"error": "Неверные учетные данные"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class WorkerCreateView(CreateAPIView):
@@ -51,17 +86,39 @@ class WorkerListView(ListAPIView):
         company_id = self.kwargs.get('company_id')
         return Worker.objects.filter(company_id=company_id)
     
-class WorkerLoginView(APIView):
-    def post(self, request):
-        username = request.data.get("username")
-        password = request.data.get("password")
 
+class WorkerLoginView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = WorkerLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
         user = authenticate(username=username, password=password)
 
-        if user is not None and hasattr(user, 'worker'):
-            login(request, user)
-            return Response({"message": "Успешный вход как сотрудник"})
-        return Response({"error": "Неверные данные или вы не сотрудник"}, status=status.HTTP_401_UNAUTHORIZED)
+        if user and user.is_worker:
+            token, _ = Token.objects.get_or_create(user=user)
+            worker = user.worker_profile
+
+            today = date.today()
+            free_slots = worker.get_free_slots(today)
+
+            reservations = worker.reservations.filter(date=today).values(
+                'id', 'full_name', 'phone', 'time'
+            )
+
+            return Response({
+                'token': token.key,
+                'worker_id': worker.id,
+                'worker_name': worker.full_name,
+                'date': today,
+                'free_slots': free_slots,
+                'reservations': list(reservations)
+            })
+
+        return Response({"error": "Неверные учетные данные"}, status=status.HTTP_401_UNAUTHORIZED)
+
+
 
 class WorkerFreeSlotsView(APIView):
     def get(self, request, worker_id):
@@ -112,8 +169,13 @@ class WorkerReservationListView(ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        worker = self.request.user.worker  
-        date = self.request.query_params.get('date')  
+        user = self.request.user
+
+        if not hasattr(user, 'worker_profile'):
+            return Reservation.objects.none()  
+
+        worker = user.worker_profile
+        date = self.request.query_params.get('date')
 
         queryset = Reservation.objects.filter(worker=worker)
         if date:

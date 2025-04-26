@@ -7,7 +7,7 @@ urlpatterns = [
     path('login/company/', CompanyLoginView.as_view(), name='company-login'),
     path('login/worker/', WorkerLoginView.as_view(), name='worker-login'),
 
-    path('companies/', CompanyListView.as_view()),
+    path('companies/', CompanyListView.as_view(), name='companies_list'),
     path('companies/<int:company_id>/workers/', WorkerListView.as_view()),
         
 
