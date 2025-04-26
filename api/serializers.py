@@ -34,6 +34,14 @@ class CompanyRegisterSerializer(serializers.ModelSerializer):
         company = Company.objects.create(user=user, **validated_data)
         return company
 
+class CompanyLoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+class WorkerLoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
 
 class CompanyListSerializer(serializers.ModelSerializer):
     class Meta:

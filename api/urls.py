@@ -8,6 +8,12 @@ urlpatterns = [
     path('companies/', CompanyListView.as_view(), name='companies_list'),
     path('companies/<int:company_id>/workers/', WorkerListView.as_view(), name='worker-list'),
 
+<<<<<<< HEAD
+=======
+    path('companies/', CompanyListView.as_view(), name='companies_list'),
+    path('companies/<int:company_id>/workers/', WorkerListView.as_view()),
+        
+>>>>>>> be9ca6a (register)
 
     path('workers/add/', WorkerCreateView.as_view(), name='worker-create'),
     path('workers/login/', WorkerLoginView.as_view(), name='worker-login'),
