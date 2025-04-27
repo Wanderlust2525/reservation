@@ -4,13 +4,18 @@ from onlinereservation.models import Company, Reservation, User, Worker
 
 
 class CompanyRegisterSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(write_only=True)
+    username = serializers.CharField(write_only=True, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
 
     class Meta:
         model = Company
         fields = ['name', 'phone', 'address', 'industry', 'username', 'password', 'password2']
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Пользователь с таким username уже существует.")
+        return value
 
     def validate(self, data):
         if data['password'] != data['password2']:
