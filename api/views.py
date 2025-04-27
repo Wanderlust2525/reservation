@@ -81,6 +81,7 @@ class WorkerCreateView(CreateAPIView):
 
 class WorkerListView(ListAPIView):
     serializer_class = WorkerListSerializer
+    permission_classes = [AllowAny] 
 
     def get_queryset(self):
         company_id = self.kwargs.get('company_id')
