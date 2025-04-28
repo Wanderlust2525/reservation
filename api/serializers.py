@@ -1,5 +1,5 @@
 from rest_framework import serializers
-
+from rest_framework.exceptions import ValidationError
 from onlinereservation.models import Company, Reservation, User, Worker
 
 
@@ -46,7 +46,7 @@ class WorkerCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Worker
-        fields = ['full_name', 'profession', 'phone', 'client_duration_minutes', 'username', 'password', 'password2']
+        fields = ['full_name', 'profession', 'phone', 'client_duration_minutes', 'work_start', 'username', 'password', 'password2']
 
     def validate(self, data):
         if data['password'] != data['password2']:
@@ -57,11 +57,20 @@ class WorkerCreateSerializer(serializers.ModelSerializer):
         username = validated_data.pop('username')
         password = validated_data.pop('password')
         validated_data.pop('password2')
+
         user = User.objects.create_user(username=username, password=password, is_worker=True)
-        company = self.context['request'].user.company  # авторизованная компания
+        
+        request_user = self.context['request'].user
+        if not request_user.is_company:
+            raise serializers.ValidationError("Только компания может добавлять сотрудников.")
+
+        try:
+            company = request_user.company
+        except Company.DoesNotExist:
+            raise serializers.ValidationError("У текущего пользователя нет связанной компании.")
+
         worker = Worker.objects.create(user=user, company=company, **validated_data)
         return worker
-
 
 class CompanyListSerializer(serializers.ModelSerializer):
     class Meta:

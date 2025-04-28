@@ -1,79 +1,112 @@
 from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
-from datetime import date, datetime, timedelta
-from django.contrib.auth import authenticate, login
-from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate
+from rest_framework.exceptions import ValidationError
+from datetime import datetime, date, timedelta
 
-from .serializers import *
+from onlinereservation.models import Company, Reservation, Worker
+
+from .serializers import (
+    CompanyLoginSerializer, CompanyRegisterSerializer, CompanyListSerializer,
+    WorkerLoginSerializer, WorkerCreateSerializer, WorkerListSerializer,
+    ReservationCreateSerializer
+)
+
+
+
 
 class CompanyLoginView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request, *args, **kwargs):
         serializer = CompanyLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        username = serializer.validated_data['username']
-        password = serializer.validated_data['password']
-        user = authenticate(username=username, password=password)
+        user = authenticate(
+            username=serializer.validated_data['username'],
+            password=serializer.validated_data['password']
+        )
 
         if user and user.is_company:
-            token, created = Token.objects.get_or_create(user=user)
+            token, _ = Token.objects.get_or_create(user=user)
             company = getattr(user, 'company', None)
-            return Response({
-                'token': token.key,
-                'company_id': company.id,
-                'company_name': company.name
-            })
+            if company:
+                return Response({
+                    'token': token.key,
+                    'company_id': company.id,
+                    'company_name': company.name
+                })
+            return Response({"error": "Компания не найдена."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response({"error": "Неверные учетные данные"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    
 
 class CompanyRegisterView(CreateAPIView):
     serializer_class = CompanyRegisterSerializer
     permission_classes = [AllowAny]
 
-
 class CompanyListView(ListAPIView):
-    queryset = Company.objects.all()
     serializer_class = CompanyListSerializer
-    permission_classes = [AllowAny]  
+    permission_classes = [AllowAny]
+    queryset = Company.objects.all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['id', 'name']
+    search_fields = ['name', 'address']
+    ordering_fields = ['id', 'name', 'created_at']
 
     def get_queryset(self):
         industry_id = self.request.query_params.get('industry')
+        queryset = super().get_queryset()
         if industry_id:
-            return Company.objects.filter(industry_id=industry_id)
-        return Company.objects.all()
-    
-    
+            queryset = queryset.filter(industry_id=industry_id)
+        return queryset
+
+
+
 class WorkerLoginView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request, *args, **kwargs):
         serializer = WorkerLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        username = serializer.validated_data['username']
-        password = serializer.validated_data['password']
-        user = authenticate(username=username, password=password)
+        user = authenticate(
+            username=serializer.validated_data['username'],
+            password=serializer.validated_data['password']
+        )
 
         if user and user.is_worker:
-            token, created = Token.objects.get_or_create(user=user)
+            token, _ = Token.objects.get_or_create(user=user)
             worker = getattr(user, 'worker_profile', None)
-            if not worker:
-                return Response({"error": "Профиль работника не найден."}, status=status.HTTP_404_NOT_FOUND)
-            return Response({
-                'token': token.key,
-                'worker_id': worker.id,
-                'worker_name': worker.full_name,
-            })
+            if worker:
+                today = date.today()
+                free_slots = worker.get_free_slots(today)
+
+                reservations = worker.reservations.filter(date=today).values(
+                    'id', 'full_name', 'phone', 'time'
+                )
+
+                return Response({
+                    'token': token.key,
+                    'worker_id': worker.id,
+                    'worker_name': worker.full_name,
+                    'date': today,
+                    'free_slots': free_slots,
+                    'reservations': list(reservations)
+                })
+
+            return Response({"error": "Профиль работника не найден."}, status=status.HTTP_404_NOT_FOUND)
 
         return Response({"error": "Неверные учетные данные"}, status=status.HTTP_401_UNAUTHORIZED)
-
 
 class WorkerCreateView(CreateAPIView):
     serializer_class = WorkerCreateSerializer
     permission_classes = [IsAuthenticated]
+    queryset = Worker.objects.all()
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -81,47 +114,25 @@ class WorkerCreateView(CreateAPIView):
 
 class WorkerListView(ListAPIView):
     serializer_class = WorkerListSerializer
-    permission_classes = [AllowAny] 
+    permission_classes = [AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+
+    filterset_fields = ['company', 'full_name', 'profession', 'work_start']  
+    search_fields = ['full_name', 'profession']  
+    ordering_fields = ['full_name', 'profession', 'work_start'] 
+    ordering = ['full_name'] 
 
     def get_queryset(self):
         company_id = self.kwargs.get('company_id')
-        return Worker.objects.filter(company_id=company_id)
-    
-
-class WorkerLoginView(APIView):
-    def post(self, request, *args, **kwargs):
-        serializer = WorkerLoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        username = serializer.validated_data['username']
-        password = serializer.validated_data['password']
-        user = authenticate(username=username, password=password)
-
-        if user and user.is_worker:
-            token, _ = Token.objects.get_or_create(user=user)
-            worker = user.worker_profile
-
-            today = date.today()
-            free_slots = worker.get_free_slots(today)
-
-            reservations = worker.reservations.filter(date=today).values(
-                'id', 'full_name', 'phone', 'time'
-            )
-
-            return Response({
-                'token': token.key,
-                'worker_id': worker.id,
-                'worker_name': worker.full_name,
-                'date': today,
-                'free_slots': free_slots,
-                'reservations': list(reservations)
-            })
-
-        return Response({"error": "Неверные учетные данные"}, status=status.HTTP_401_UNAUTHORIZED)
+        if company_id:
+            return Worker.objects.filter(company_id=company_id)
+        return Worker.objects.all()
 
 
 
 class WorkerFreeSlotsView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, worker_id):
         date_str = request.query_params.get('date')
         if not date_str:
@@ -137,22 +148,7 @@ class WorkerFreeSlotsView(APIView):
         except Worker.DoesNotExist:
             return Response({'error': 'Работник не найден'}, status=404)
 
-        
-        start_time = datetime.combine(date_obj, datetime.strptime('09:00', '%H:%M').time())
-        end_time = datetime.combine(date_obj, datetime.strptime('18:00', '%H:%M').time())
-        slot_duration = timedelta(minutes=worker.client_duration_minutes)
-
-        all_slots = []
-        current_time = start_time
-        while current_time + slot_duration <= end_time:
-            all_slots.append(current_time.time().strftime('%H:%M'))
-            current_time += slot_duration
-
-        
-        reserved_times = Reservation.objects.filter(worker=worker, date=date_obj).values_list('time', flat=True)
-        reserved_times = [t.strftime('%H:%M') for t in reserved_times]
-
-        free_slots = [slot for slot in all_slots if slot not in reserved_times]
+        free_slots = worker.get_free_slots(date_obj)
 
         return Response({
             'date': str(date_obj),
@@ -164,22 +160,20 @@ class ReservationCreateView(CreateAPIView):
     serializer_class = ReservationCreateSerializer
     permission_classes = [AllowAny]
 
-
 class WorkerReservationListView(ListAPIView):
     serializer_class = ReservationCreateSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-
         if not hasattr(user, 'worker_profile'):
-            return Reservation.objects.none()  
+            return Reservation.objects.none()
 
         worker = user.worker_profile
-        date = self.request.query_params.get('date')
+        date_param = self.request.query_params.get('date')
 
         queryset = Reservation.objects.filter(worker=worker)
-        if date:
-            queryset = queryset.filter(date=date)
+        if date_param:
+            queryset = queryset.filter(date=date_param)
 
         return queryset.order_by('time')

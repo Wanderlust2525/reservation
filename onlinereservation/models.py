@@ -31,17 +31,18 @@ class Worker(models.Model):
     profession = models.CharField(max_length=255)
     phone = models.CharField(max_length=20)
     client_duration_minutes = models.PositiveIntegerField()
+    work_start = models.TimeField(default="09:00:00")
 
     def __str__(self):
         return self.full_name
 
     def get_free_slots(self, date):
-        start = timezone.datetime.combine(date, timezone.datetime.min.time())
+        start = timezone.datetime.combine(date, self.work_start) 
         end = timezone.datetime.combine(date, timezone.datetime.max.time())
         reservations = self.reservations.filter(date=date).values_list('time', flat=True)
         slots = []
-        current_time = timezone.datetime.combine(date, timezone.datetime.min.time()).replace(hour=9, minute=0)  
-        end_time = current_time.replace(hour=18, minute=0)  
+        current_time = start
+        end_time = start.replace(hour=18, minute=0)  
         delta = timezone.timedelta(minutes=self.client_duration_minutes)
 
         while current_time + delta <= end_time:
