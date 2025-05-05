@@ -1,11 +1,7 @@
-from django.contrib.auth.models import AbstractUser
 from django.db import models
+from datetime import datetime
 from django.utils import timezone
-
-
-class User(AbstractUser):
-    is_company = models.BooleanField(default=False)
-    is_worker = models.BooleanField(default=False)
+from account.models import User  
 
 class Industry(models.Model):
     name = models.CharField(max_length=100)
@@ -15,7 +11,7 @@ class Industry(models.Model):
 
 
 class Company(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, limit_choices_to={'role': User.DIRECTOR})
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=20)
     address = models.TextField()
@@ -24,26 +20,30 @@ class Company(models.Model):
     def __str__(self):
         return self.name
 
+
 class Worker(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='worker_profile')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='worker_profile', limit_choices_to={'role': User.WORKER})
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='workers')
     full_name = models.CharField(max_length=255)
     profession = models.CharField(max_length=255)
     phone = models.CharField(max_length=20)
-    client_duration_minutes = models.PositiveIntegerField()
+    client_duration_minutes = models.PositiveIntegerField(default=15)
     work_start = models.TimeField(default="09:00:00")
 
     def __str__(self):
-        return self.full_name
+        return self.user.get_full_name
 
     def get_free_slots(self, date):
-        start = timezone.datetime.combine(date, self.work_start) 
-        end = timezone.datetime.combine(date, timezone.datetime.max.time())
-        reservations = self.reservations.filter(date=date).values_list('time', flat=True)
-        slots = []
-        current_time = start
-        end_time = start.replace(hour=18, minute=0)  
+        if isinstance(date, str):
+            date = datetime.strptime(date, '%Y-%m-%d').date()
+
+        start = timezone.datetime.combine(date, self.work_start)
+        end_time = start.replace(hour=18, minute=0)
         delta = timezone.timedelta(minutes=self.client_duration_minutes)
+
+        reservations = self.reservations.filter(date=date).values_list('time', flat=True)
+        current_time = start
+        slots = []
 
         while current_time + delta <= end_time:
             if current_time.time() not in reservations:
@@ -51,6 +51,9 @@ class Worker(models.Model):
             current_time += delta
 
         return slots
+
+    def is_slot_available(self, date, time):
+        return not self.reservations.filter(date=date, time=time).exists()
 
 
 class Reservation(models.Model):
@@ -64,7 +67,7 @@ class Reservation(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.ticket_number:
-            same_day_reservations = Reservation.objects.filter(date=self.date).order_by('ticket_number')
+            same_day_reservations = Reservation.objects.filter(date=self.date, worker=self.worker).order_by('time')
             next_number = same_day_reservations.count() + 1
-            self.ticket_number = str(next_number) 
+            self.ticket_number = str(next_number)
         super().save(*args, **kwargs)

@@ -3,19 +3,18 @@ from .views import *
 from .yasg import urlpatterns as url_doc
 
 urlpatterns = [
-    path('register/company/', CompanyRegisterView.as_view()),
-    path('login/company/', CompanyLoginView.as_view(), name='company-login'),
-    path('login/worker/', WorkerLoginView.as_view(), name='worker-login'),
-
+    path('company/register/', CompanyRegisterView.as_view(), name='company-register'),
+    path('company/login/', CompanyLoginView.as_view(), name='company-login'),
     path('companies/', CompanyListView.as_view(), name='companies_list'),
-    path('companies/<int:company_id>/workers/', WorkerListView.as_view()),
-        
+    path('companies/<int:company_id>/workers/', WorkerListView.as_view(), name='worker-list'),
 
-    path('workers/add/', WorkerCreateView.as_view()),
-    path('workers/<int:worker_id>/free-slots/', WorkerFreeSlotsView.as_view()),
 
-    path('reservations/create/', ReservationCreateView.as_view()),
-    path('worker/reservations/', WorkerReservationListView.as_view()),
+    path('workers/add/', WorkerCreateView.as_view(), name='worker-create'),
+    path('workers/login/', WorkerLoginView.as_view(), name='worker-login'),
+    path('workers/<int:worker_id>/', WorkerDetailView.as_view(), name='worker-detail'),
+    path('workers/<int:worker_id>/free-slots/', WorkerFreeSlotsView.as_view(), name='worker-free-slots'),
+    path('reservations/create/', ReservationCreateView.as_view(), name='reservation-create'),
+    path('workers/<int:worker_id>/reservations/', WorkerReservationListView.as_view(), name='worker-reservations'),
     
    
 

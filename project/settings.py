@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework_simplejwt',
 
 
     'phonenumber_field',
@@ -46,10 +47,23 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'drf_yasg',
 
-    'onlinereservation'
+    'onlinereservation',
+    'account'
 ]
+from datetime import timedelta
 
-AUTH_USER_MODEL = 'onlinereservation.User'
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=3650), 
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=3650),  
+    'ROTATE_REFRESH_TOKENS': False, 
+    'BLACKLIST_AFTER_ROTATION': False,
+    'ALGORITHM': 'HS256',  
+    'SIGNING_KEY': 'your-secret-key', 
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+}
+
+AUTH_USER_MODEL = 'account.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
@@ -62,6 +76,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',  
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
