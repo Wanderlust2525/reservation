@@ -109,7 +109,7 @@ class WorkerLoginView(APIView):
 
 
 class WorkerFreeSlotsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, worker_id, *args, **kwargs):
         try:
@@ -122,7 +122,7 @@ class WorkerFreeSlotsView(APIView):
     
 class WorkerListView(generics.ListAPIView):
     serializer_class = WorkerSerializer
-    permission_classes = [IsAuthenticated]  
+    permission_classes = [AllowAny]  
 
     def get_queryset(self):
         company_id = self.kwargs['company_id']
@@ -137,7 +137,7 @@ class WorkerDetailView(generics.RetrieveAPIView):
     
 
 class ReservationCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = ReservationCreateSerializer(data=request.data)
@@ -151,7 +151,7 @@ class ReservationCreateView(APIView):
     
 
 class WorkerReservationListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, worker_id, *args, **kwargs):
         if request.user.role != 'worker' or request.user.worker_profile.id != worker_id:
