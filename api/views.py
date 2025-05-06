@@ -154,8 +154,9 @@ class WorkerReservationListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, worker_id, *args, **kwargs):
-        if request.user.role != 'worker' or request.user.worker_profile.id != worker_id:
-            return Response({'error': 'У вас нет доступа к этому ресурсу.'}, status=status.HTTP_403_FORBIDDEN)
-        reservations = Reservation.objects.filter(worker_id=worker_id)
+        if request.user.is_authenticated and request.user.role == 'worker' and request.user.worker_profile.id == worker_id:
+            reservations = Reservation.objects.filter(worker_id=worker_id)
+        else:
+            reservations = Reservation.objects.filter(worker_id=worker_id).only('date', 'time', 'ticket_number')  
         serializer = ReservationCreateSerializer(reservations, many=True)
         return Response(serializer.data)
