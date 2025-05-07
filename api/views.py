@@ -137,11 +137,14 @@ class WorkerDetailView(generics.RetrieveAPIView):
     lookup_url_kwarg = 'worker_id'
 
 
+
+
+class WorkerProfessionsView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, *args, **kwargs):
-        professions = Worker.objects.values_list('profession', flat=True).distinct()
+        professions = Worker.objects.values('id', 'profession').distinct()
         return Response(professions)
-
-
     
 
 class ReservationCreateView(APIView):
