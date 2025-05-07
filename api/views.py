@@ -131,6 +131,7 @@ class WorkerListView(generics.ListAPIView):
 
 class WorkerDetailView(generics.RetrieveAPIView):
     queryset = Worker.objects.all()
+    permission_classes = [AllowAny]  
     serializer_class = WorkerSerializer
     lookup_field = 'id'  
     lookup_url_kwarg = 'worker_id'
