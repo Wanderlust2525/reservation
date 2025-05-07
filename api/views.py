@@ -2,6 +2,7 @@ from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework import generics
+from rest_framework.generics import GenericAPIView 
 from rest_framework.response import Response
 from rest_framework import status, filters
 from django_filters.rest_framework import DjangoFilterBackend
@@ -129,7 +130,7 @@ class WorkerListView(generics.ListAPIView):
         return Worker.objects.filter(company_id=company_id)
 
 
-class WorkerDetailView(APIView):
+class WorkerDetailView(GenericAPIView  ):
     queryset = Worker.objects.all()
     permission_classes = [AllowAny]  
     serializer_class = WorkerSerializer
