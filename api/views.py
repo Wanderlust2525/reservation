@@ -129,7 +129,7 @@ class WorkerListView(generics.ListAPIView):
         return Worker.objects.filter(company_id=company_id)
 
 
-class WorkerDetailView(generics.RetrieveAPIView):
+class WorkerDetailView(APIView):
     queryset = Worker.objects.all()
     permission_classes = [AllowAny]  
     serializer_class = WorkerSerializer
