@@ -9,12 +9,12 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from account.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import CompanyListSerializer, CompanyLoginSerializer, ReservationCreateSerializer, WorkerCreateSerializer, WorkerLoginSerializer, WorkerSerializer
+from .serializers import CompanyListSerializer, CompanyLoginSerializer, IndustrySerializer, ReservationCreateSerializer, WorkerCreateSerializer, WorkerLoginSerializer, WorkerSerializer
 
 
 from rest_framework.exceptions import NotFound
 from api.serializers import CompanyRegisterSerializer
-from onlinereservation.models import Company, Reservation, Worker
+from onlinereservation.models import Company, Industry, Reservation, Worker
 
 
 
@@ -135,6 +135,13 @@ class WorkerDetailView(generics.RetrieveAPIView):
     serializer_class = WorkerSerializer
     lookup_field = 'id'  
     lookup_url_kwarg = 'worker_id'
+
+
+    def get(self, request, *args, **kwargs):
+        professions = Worker.objects.values_list('profession', flat=True).distinct()
+        return Response(professions)
+
+
     
 
 class ReservationCreateView(APIView):
@@ -161,3 +168,8 @@ class WorkerReservationListView(APIView):
             reservations = Reservation.objects.filter(worker_id=worker_id).only('date', 'time', 'ticket_number')  
         serializer = ReservationCreateSerializer(reservations, many=True)
         return Response(serializer.data)
+    
+class IndustryListView(generics.ListAPIView):
+    queryset = Industry.objects.all()
+    serializer_class = IndustrySerializer
+    permission_classes = [AllowAny]

@@ -12,9 +12,13 @@ urlpatterns = [
     path('workers/add/', WorkerCreateView.as_view(), name='worker-create'),
     path('workers/login/', WorkerLoginView.as_view(), name='worker-login'),
     path('workers/<int:worker_id>/', WorkerDetailView.as_view(), name='worker-detail'),
+    path('api/v1/workers/professions/', WorkerDetailView.as_view(), name='worker-professions'),
     path('workers/<int:worker_id>/free-slots/', WorkerFreeSlotsView.as_view(), name='worker-free-slots'),
     path('reservations/create/', ReservationCreateView.as_view(), name='reservation-create'),
     path('workers/<int:worker_id>/reservations/', WorkerReservationListView.as_view(), name='worker-reservations'),
+
+    path('api/v1/industries/', IndustryListView.as_view(), name='industry-list'),
+    
     
    
 

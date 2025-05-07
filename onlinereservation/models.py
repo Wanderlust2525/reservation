@@ -21,6 +21,7 @@ class Company(models.Model):
         return self.name
 
 
+
 class Worker(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='worker_profile', limit_choices_to={'role': User.WORKER})
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='workers')
@@ -29,6 +30,7 @@ class Worker(models.Model):
     phone = models.CharField(max_length=20)
     client_duration_minutes = models.PositiveIntegerField(default=15)
     work_start = models.TimeField(default="09:00:00")
+    work_end = models.TimeField(default="18:00:00")  
 
     def __str__(self):
         return self.user.get_full_name
@@ -37,13 +39,16 @@ class Worker(models.Model):
         if isinstance(date, str):
             date = datetime.strptime(date, '%Y-%m-%d').date()
 
+       
         start = timezone.datetime.combine(date, self.work_start)
-        end_time = start.replace(hour=18, minute=0)
+        end_time = timezone.datetime.combine(date, self.work_end)  
         delta = timezone.timedelta(minutes=self.client_duration_minutes)
 
-        reservations = self.reservations.filter(date=date).values_list('time', flat=True)
+        
+        reservations = self.reservations.filter(date=date).values_list('time', flat=True)        
         current_time = start
         slots = []
+
 
         while current_time + delta <= end_time:
             if current_time.time() not in reservations:
