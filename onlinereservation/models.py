@@ -23,11 +23,7 @@ class Company(models.Model):
 
 
 class Worker(models.Model):
-<<<<<<< HEAD
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='worker_profile', limit_choices_to={'role': User.WORKER})
-=======
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='worker_profile')
->>>>>>> be9ca6a (register)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='workers')
     full_name = models.CharField(max_length=255)
     profession = models.CharField(max_length=255)
