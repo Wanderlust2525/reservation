@@ -2,6 +2,7 @@ from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework import generics
+from rest_framework.generics import RetrieveAPIView  
 from rest_framework.response import Response
 from rest_framework import status, filters
 from django_filters.rest_framework import DjangoFilterBackend
@@ -9,12 +10,12 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from account.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import CompanyListSerializer, CompanyLoginSerializer, ReservationCreateSerializer, WorkerCreateSerializer, WorkerLoginSerializer, WorkerSerializer
+from .serializers import CompanyListSerializer, CompanyLoginSerializer, IndustrySerializer, ReservationCreateSerializer, WorkerCreateSerializer, WorkerLoginSerializer, WorkerSerializer
 
 
 from rest_framework.exceptions import NotFound
 from api.serializers import CompanyRegisterSerializer
-from onlinereservation.models import Company, Reservation, Worker
+from onlinereservation.models import Company, Industry, Reservation, Worker
 
 
 
@@ -108,8 +109,8 @@ class WorkerLoginView(APIView):
         return Response({'error': 'Неверные учетные данные или пользователь не является сотрудником.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class WorkerFreeSlotsView(APIView):
-    permission_classes = [IsAuthenticated]
+class WorkerFreeSlotsView(RetrieveAPIView):
+    permission_classes = [AllowAny]
 
     def get(self, request, worker_id, *args, **kwargs):
         try:
@@ -122,22 +123,33 @@ class WorkerFreeSlotsView(APIView):
     
 class WorkerListView(generics.ListAPIView):
     serializer_class = WorkerSerializer
-    permission_classes = [IsAuthenticated]  
+    permission_classes = [AllowAny]  
 
     def get_queryset(self):
         company_id = self.kwargs['company_id']
         return Worker.objects.filter(company_id=company_id)
 
 
-class WorkerDetailView(generics.RetrieveAPIView):
+class WorkerDetailView(RetrieveAPIView ):
     queryset = Worker.objects.all()
+    permission_classes = [AllowAny]  
     serializer_class = WorkerSerializer
     lookup_field = 'id'  
     lookup_url_kwarg = 'worker_id'
+
+
+
+
+class WorkerProfessionsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        professions = Worker.objects.values('id', 'profession').distinct()
+        return Response(professions)
     
 
 class ReservationCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = ReservationCreateSerializer(data=request.data)
@@ -146,16 +158,29 @@ class ReservationCreateView(APIView):
 
         return Response({
             'reservation_id': reservation.id,
+            'worker': reservation.worker.id,
+            'full_name': reservation.full_name,
+            'phone': reservation.phone,
+            'comment': reservation.comment,
+            'date': reservation.date,
+            'time': reservation.time,
+            'ticket_number': reservation.ticket_number,
             'message': 'Бронирование успешно создано!'
         }, status=status.HTTP_201_CREATED)
     
 
 class WorkerReservationListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, worker_id, *args, **kwargs):
-        if request.user.role != 'worker' or request.user.worker_profile.id != worker_id:
-            return Response({'error': 'У вас нет доступа к этому ресурсу.'}, status=status.HTTP_403_FORBIDDEN)
-        reservations = Reservation.objects.filter(worker_id=worker_id)
+        if request.user.is_authenticated and request.user.role == 'worker' and request.user.worker_profile.id == worker_id:
+            reservations = Reservation.objects.filter(worker_id=worker_id)
+        else:
+            reservations = Reservation.objects.filter(worker_id=worker_id).only('date', 'time', 'ticket_number')  
         serializer = ReservationCreateSerializer(reservations, many=True)
         return Response(serializer.data)
+    
+class IndustryListView(generics.ListAPIView):
+    queryset = Industry.objects.all()
+    serializer_class = IndustrySerializer
+    permission_classes = [AllowAny]
