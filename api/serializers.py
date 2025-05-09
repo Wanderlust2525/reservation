@@ -10,26 +10,20 @@ from account.models import User
 class CompanyRegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True)
-    password2 = serializers.CharField(write_only=True)
 
     class Meta:
         model = Company
-        fields = ['name', 'phone', 'address', 'industry', 'username', 'password', 'password2']
+        fields = ['name', 'phone', 'address', 'industry', 'username', 'password']
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Пользователь с таким username уже существует.")
         return value
 
-    def validate(self, data):
-        if data['password'] != data['password2']:
-            raise serializers.ValidationError("Пароли не совпадают")
-        return data
 
     def create(self, validated_data):
         username = validated_data.pop('username')
         password = validated_data.pop('password')
-        validated_data.pop('password2')
         user = User.objects.create_user(username=username, password=password, role=User.DIRECTOR)
         company = Company.objects.create(user=user, **validated_data)
         return company
@@ -55,22 +49,16 @@ class CompanyLoginSerializer(serializers.Serializer):
 class WorkerCreateSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True)
-    password2 = serializers.CharField(write_only=True)
     work_start = serializers.TimeField(required=False)  
 
     class Meta:
         model = Worker
-        fields = ['full_name', 'profession', 'phone', 'client_duration_minutes', 'work_start', 'username', 'password', 'password2']
+        fields = ['full_name', 'profession', 'phone', 'client_duration_minutes', 'work_start', 'work_end','username', 'password']
 
-    def validate(self, data):
-        if data['password'] != data['password2']:
-            raise serializers.ValidationError("Пароли не совпадают")
-        return data
 
     def create(self, validated_data):
         username = validated_data.pop('username')
         password = validated_data.pop('password')
-        validated_data.pop('password2')
 
         user = User.objects.create_user(username=username, password=password, role='worker')
 
@@ -98,12 +86,13 @@ class WorkerLoginSerializer(serializers.Serializer):
 class WorkerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Worker
-        fields = ['id', 'full_name', 'profession', 'phone', 'client_duration_minutes', 'work_start', 'company']
+        fields = ['id', 'full_name', 'profession', 'phone', 'client_duration_minutes', 'work_start', 'work_end','company']
 
 class ReservationCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reservation
-        fields = ['worker', 'full_name', 'phone', 'comment', 'date','time'] 
+        fields = ['worker', 'full_name', 'phone', 'comment', 'date','time','ticket_number'] 
+        read_only_fields = ['ticket_number']  
 
     def validate(self, data):
         worker = data['worker']
@@ -112,8 +101,15 @@ class ReservationCreateSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        reservation = Reservation(**validated_data)
-        reservation.save()
+        worker = validated_data['worker']
+        date = validated_data['date']
+        reservations_count = Reservation.objects.filter(worker=worker, date=date).count()
+        ticket_number = f"{reservations_count + 1}"
+
+        reservation = Reservation.objects.create(
+            **validated_data,
+            ticket_number=ticket_number
+        )
         return reservation
     
 class IndustrySerializer(serializers.ModelSerializer):

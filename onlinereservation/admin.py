@@ -1,8 +1,12 @@
 from django.contrib import admin
-from .models import Industry, Company, Worker, Reservation
+from .models import Industry, Company, Profession, Worker, Reservation
 
 @admin.register(Industry)
 class IndustryAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name']
+
+@admin.register(Profession)
+class ProfessionAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
 
 @admin.register(Company)

@@ -23,14 +23,12 @@ class User(AbstractUser):
         null=True, blank=True
     )
 
-    phone = PhoneNumberField('номер телефона', )
     role = models.CharField('роль', choices=ROLE, default=CLIENT, max_length=15)
 
     
     objects = UserManager()
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = [ 'phone',]
 
     class Meta:
         verbose_name = 'пользователь'

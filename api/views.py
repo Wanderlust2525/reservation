@@ -109,7 +109,7 @@ class WorkerLoginView(APIView):
         return Response({'error': 'Неверные учетные данные или пользователь не является сотрудником.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class WorkerFreeSlotsView(APIView):
+class WorkerFreeSlotsView(RetrieveAPIView):
     permission_classes = [AllowAny]
 
     def get(self, request, worker_id, *args, **kwargs):
@@ -158,6 +158,13 @@ class ReservationCreateView(APIView):
 
         return Response({
             'reservation_id': reservation.id,
+            'worker': reservation.worker.id,
+            'full_name': reservation.full_name,
+            'phone': reservation.phone,
+            'comment': reservation.comment,
+            'date': reservation.date,
+            'time': reservation.time,
+            'ticket_number': reservation.ticket_number,
             'message': 'Бронирование успешно создано!'
         }, status=status.HTTP_201_CREATED)
     

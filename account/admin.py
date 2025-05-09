@@ -8,16 +8,16 @@ from .models import User
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = (
-        'id', 'username', 'phone', 'get_full_name', 'role', 'get_avatar'
+        'id', 'username', 'get_full_name', 'role', 'get_avatar'
     )
     list_display_links = ('id', 'username')
-    search_fields = ('username', 'first_name', 'last_name',  'phone')
+    search_fields = ('username', 'first_name', 'last_name')
     list_filter = ('role', 'is_staff', 'is_active')
     ordering = ('-date_joined',)
     filter_horizontal = ('groups', 'user_permissions')
 
     fieldsets = (
-        (None, {'fields': ('username','phone', 'password')}),
+        (None, {'fields': ('username', 'password')}),
         (_('Личная информация'), {'fields': (
             'avatar', 'get_avatar', 'first_name', 'last_name'
         )}),
@@ -30,7 +30,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'phone', 'password1', 'password2', 'role'),
+            'fields': ('username','password1', 'password2', 'role'),
         }),
     )
 

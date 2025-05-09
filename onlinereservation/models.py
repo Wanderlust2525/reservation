@@ -9,6 +9,12 @@ class Industry(models.Model):
     def __str__(self):
         return self.name
 
+class Profession(models.Model):
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f'{self.id}.{self.name}'
+    
 
 class Company(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, limit_choices_to={'role': User.DIRECTOR})
@@ -26,7 +32,7 @@ class Worker(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='worker_profile', limit_choices_to={'role': User.WORKER})
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='workers')
     full_name = models.CharField(max_length=255)
-    profession = models.CharField(max_length=255)
+    profession = models.ForeignKey(Profession, on_delete=models.SET_NULL, null=True)
     phone = models.CharField(max_length=20)
     client_duration_minutes = models.PositiveIntegerField(default=15)
     work_start = models.TimeField(default="09:00:00")
