@@ -75,7 +75,19 @@ class CompanyListView(ListAPIView):
             queryset = queryset.filter(industry_id=industry_id) 
         return queryset
     
+class CurrentCompanyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            company = request.user.company
+        except Company.DoesNotExist:
+            return Response({'error': 'Компания не найдена'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CompanyListSerializer(company)
+        return Response(serializer.data)
     
+        
 class WorkerCreateView(APIView):
         permission_classes = [IsAuthenticated]
 

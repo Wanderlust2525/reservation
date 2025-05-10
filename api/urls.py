@@ -5,6 +5,7 @@ from .yasg import urlpatterns as url_doc
 urlpatterns = [
     path('company/register/', CompanyRegisterView.as_view(), name='company-register'),
     path('company/login/', CompanyLoginView.as_view(), name='company-login'),
+    path('company/current/', CurrentCompanyView.as_view(), name='current-company'),
     path('companies/', CompanyListView.as_view(), name='companies_list'),
     path('companies/<int:company_id>/workers/', WorkerListView.as_view(), name='worker-list'),
 
